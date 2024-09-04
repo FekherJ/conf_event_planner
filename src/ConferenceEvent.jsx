@@ -4,7 +4,8 @@ import "./ConferenceEvent.css"; // Import the CSS file for styling
 import TotalCost from "./TotalCost"; // Import the TotalCost component
 import { useSelector, useDispatch } from "react-redux"; // Import Redux hooks for state management
 import { incrementQuantity, decrementQuantity } from "./venueSlice"; // Import actions from the venueSlice
-import { incrementAvQuantity, decrementAvQuantity } from "./avSlice";
+import { incrementQuantity, decrementQuantity } from "./venueSlice";
+import { toggleMealSelection } from "./avSlice";
 
 
 // Main component for handling the conference event planning
@@ -18,8 +19,9 @@ const ConferenceEvent = () => {
 
     
     // Retrieve the venue items from the Redux store
-    const venueItems = useSelector((state) => state.venue);
+    const venueItems = useSelector((state) => state.venue); //venue is the name of the slice
     const avItems = useSelector((state) => state.av);
+    const mealItems = useSelector((state) => state.meals)
 
     
     // Get the dispatch function to send actions to the Redux store
@@ -73,34 +75,114 @@ const ConferenceEvent = () => {
 
     // Placeholder function for handling meal selection (not yet implemented)
     const handleMealSelection = (index) => {
+      const item = mealItems[index];
+      if (item.selected && item.type === "mealForPeaople"){
+        // Ensure numberOfPeople is set before toggling selection
+        const newNumberOfPeople = item.selected ? numberOfPeople : 0; // update the numberOfPeople state variable
+        dispatch(toggleMealSelection(index, newNumberOfPeople));  // toggling the selection
+      }
+      else {  //  item of type mealForPeople not selected
+        dispatch(toggleMealSelection(index));
+      }
+
        
     };
 
     // Placeholder function to retrieve items from the TotalCost component (not yet implemented)
-    const getItemsFromTotalCost = () => {
-        const items = []; // Currently returns an empty array
+    const getItemsFromTotalCost = () => { // Function to retrieve selected items from venue, AV, and meals
+      const items = []; // Initialize empty array to store selected items
+  
+      venueItems.forEach((item) => { // Loop through venue items
+          if (item.quantity > 0) { // Check if item has been selected (quantity > 0)
+              items.push({ ...item, type: "venue" }); // Add item to array and set type to "venue"
+          }
+      });
+  
+      avItems.forEach((item) => { // Loop through AV items
+          if (item.quantity > 0 && !items.some((i) => i.name === item.name && i.type === "av")) { // Check if AV item is selected and not already in items
+              items.push({ ...item, type: "av" }); // Add AV item to array and set type to "av"
+          }
+      });
+  
+      mealsItems.forEach((item) => { // Loop through meal items
+          if (item.selected) { // Check if meal item is selected
+              const itemForDisplay = { ...item, type: "meals" }; // Create a new object for the selected meal item and set type to "meals"
+              if (item.numberOfPeople) { // If meal item has a numberOfPeople property
+                  itemForDisplay.numberOfPeople = numberOfPeople; // Set the number of people for the meal item
+              }
+              items.push(itemForDisplay); // Add meal item to array
+          }
+      });
+  
+      return items; // Return the array of selected items
     };
+  
 
     // Get items from the TotalCost component (currently empty)
     const items = getItemsFromTotalCost();
 
     // Placeholder component for displaying items (not yet implemented)
     const ItemsDisplay = ({ items }) => {
-
+      console.log(items);
+      return <>
+          <div className="display_box1">
+              {items.length === 0 && <p>No items selected</p>}
+              <table className="table_item_data">
+                  <thead>
+                      <tr>
+                          <th>Name</th>
+                          <th>Unit Cost</th>
+                          <th>Quantity</th>
+                          <th>Subtotal</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {items.map((item, index) => (
+                          <tr key={index}>
+                              <td>{item.name}</td>
+                              <td>${item.cost}</td>
+                              <td>
+                                  {item.type === "meals" || item.numberOfPeople
+                                  ? ` For ${numberOfPeople} people`
+                                  : item.quantity}
+                              </td>
+                              <td>{item.type === "meals" || item.numberOfPeople
+                                  ? `${item.cost * numberOfPeople}`
+                                  : `${item.cost * item.quantity}`}
+                              </td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
+          </div>
+      </>
     };
 
     // Function to calculate the total cost of the selected items
     const calculateTotalCost = (section) => {
         let totalCost = 0;
         if (section === "venue") {
-          venueItems.forEach((item) => {
+            venueItems.forEach((item) => {
             totalCost += item.cost * item.quantity; // Multiply item cost by quantity and add to total cost
           });
         } else if (section === "av") {
-            avItems.forEach((item) => {
+              avItems.forEach((item) => {
               totalCost += item.cost * item.quantity;
             });
-        }
+        } else if (section === "meals") {
+            mealsItems.forEach((item) => {
+              if (item.selected) {
+                totalCost += item.cost * numberOfPeople;
+              }
+            });
+        
+        // object named totalCosts which includes all three subtotals in the total cost.
+        const totalCosts = {
+              venue: venueTotalCost,
+              av: avTotalCost,
+              meals: mealsTotalCost,
+        };
+
         return totalCost; // Return the calculated total cost
       };
 
@@ -111,6 +193,8 @@ const ConferenceEvent = () => {
     // Calculate the total cost for the venue section
     const venueTotalCost = calculateTotalCost("venue");
     const avTotalCost = calculateTotalCost("av");
+    const mealsTotalCost = calculateTotalCost("meals");
+
 
 
     // Function to handle navigation to different sections (e.g., Venue, Add-ons, Meals)
@@ -122,6 +206,7 @@ const ConferenceEvent = () => {
           }
         }
       }
+
 
     // JSX (React's syntax for UI) to render the component
     return (
@@ -214,7 +299,7 @@ const ConferenceEvent = () => {
                             </div>
                             <div className="addons_selection">
                                 {/* Add-on items will be displayed here */}
-                                <div className="total_cost">Total Cost: {avTotalCost}</div>
+                                
                                 {avItems.map((item, index) => (
                                   <div className="av_data venue_main" key={index}>
                                     <div className="img"> <img src={item.img} alt={item.name} /></div>
@@ -228,7 +313,7 @@ const ConferenceEvent = () => {
                                   </div>
                                  ))}
                             </div>
-                            <div className="total_cost">Total Cost:</div>
+                            <div className="total_cost">Total Cost: {avTotalCost}</div>
                         </div>
 
                         {/* Meals section (currently empty) */}
@@ -238,11 +323,27 @@ const ConferenceEvent = () => {
                             </div>
                             <div className="input-container venue_selection">
                                 {/* Meal selection inputs will be displayed here */}
+                                <label htmlFor="numberOfPeople"><h3>Number of People:</h3></label>
+                                <input type="number" className="input_box5" id="numberOfPeople" value={numberOfPeople}
+                                onChange={(e) => setNumberOfPeople(parseInt(e.target.value))}
+                                min="1"/>
                             </div>
+                            
                             <div className="meal_selection">
                                 {/* Meal items will be displayed here */}
+                                {mealsItems.map((item, index) => (
+                                <div className="meal_item" key={index} style={{ padding: 15 }}>
+                                  <div className="inner">
+                                    <input type="checkbox" id={ `meal_${index}` }
+                                    checked={ item.selected }
+                                    onChange={() => handleMealSelection(index)}/>
+                                    <label htmlFor={`meal_${index}`}> {item.name} </label>
+                                  </div>
+                                  <div className="meal_cost">${item.cost}</div>
+                                </div>
+                                ))}
                             </div>
-                            <div className="total_cost">Total Cost:</div>
+                            <div className="total_cost">Total Cost: {mealsTotalCost} </div>
                         </div>
                     </div>
                 ) : (
