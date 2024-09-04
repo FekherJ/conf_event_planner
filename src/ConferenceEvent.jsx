@@ -4,8 +4,12 @@ import "./ConferenceEvent.css"; // Import the CSS file for styling
 import TotalCost from "./TotalCost"; // Import the TotalCost component
 import { useSelector, useDispatch } from "react-redux"; // Import Redux hooks for state management
 import { incrementQuantity, decrementQuantity } from "./venueSlice"; // Import actions from the venueSlice
-import { incrementQuantity, decrementQuantity } from "./venueSlice";
-import { toggleMealSelection } from "./avSlice";
+import { toggleMealSelection } from "./mealsSlice";
+import { incrementAvQuantity, decrementAvQuantity } from "./avSlice";
+
+
+
+
 
 
 // Main component for handling the conference event planning
@@ -21,7 +25,7 @@ const ConferenceEvent = () => {
     // Retrieve the venue items from the Redux store
     const venueItems = useSelector((state) => state.venue); //venue is the name of the slice
     const avItems = useSelector((state) => state.av);
-    const mealItems = useSelector((state) => state.meals)
+    const mealItems = useSelector((state) => state.meals);
 
     
     // Get the dispatch function to send actions to the Redux store
@@ -89,32 +93,31 @@ const ConferenceEvent = () => {
     };
 
     // Placeholder function to retrieve items from the TotalCost component (not yet implemented)
-    const getItemsFromTotalCost = () => { // Function to retrieve selected items from venue, AV, and meals
-      const items = []; // Initialize empty array to store selected items
-  
-      venueItems.forEach((item) => { // Loop through venue items
-          if (item.quantity > 0) { // Check if item has been selected (quantity > 0)
-              items.push({ ...item, type: "venue" }); // Add item to array and set type to "venue"
-          }
+    const getItemsFromTotalCost = () => {
+      const items = [];
+      venueItems.forEach((item) => {
+        if (item.quantity > 0) {
+          items.push({ ...item, type: "venue" });
+        }
       });
-  
-      avItems.forEach((item) => { // Loop through AV items
-          if (item.quantity > 0 && !items.some((i) => i.name === item.name && i.type === "av")) { // Check if AV item is selected and not already in items
-              items.push({ ...item, type: "av" }); // Add AV item to array and set type to "av"
-          }
+      avItems.forEach((item) => {
+        if (
+          item.quantity > 0 &&
+          !items.some((i) => i.name === item.name && i.type === "av")
+        ) {
+          items.push({ ...item, type: "av" });
+        }
       });
-  
-      mealsItems.forEach((item) => { // Loop through meal items
-          if (item.selected) { // Check if meal item is selected
-              const itemForDisplay = { ...item, type: "meals" }; // Create a new object for the selected meal item and set type to "meals"
-              if (item.numberOfPeople) { // If meal item has a numberOfPeople property
-                  itemForDisplay.numberOfPeople = numberOfPeople; // Set the number of people for the meal item
-              }
-              items.push(itemForDisplay); // Add meal item to array
+      mealItems.forEach((item) => {
+        if (item.selected) {
+          const itemForDisplay = { ...item, type: "meals" };
+          if (item.numberOfPeople) {
+            itemForDisplay.numberOfPeople = numberOfPeople;
           }
+          items.push(itemForDisplay);
+        }
       });
-  
-      return items; // Return the array of selected items
+      return items;
     };
   
 
@@ -359,6 +362,7 @@ const ConferenceEvent = () => {
             </div>
         </>
     );
+};
 };
 
 // Export the component so it can be used in other parts of the application
